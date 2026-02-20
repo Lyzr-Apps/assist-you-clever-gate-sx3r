@@ -20,7 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   FiLoader, FiExternalLink, FiClock, FiCheckCircle, FiXCircle, FiAlertCircle,
   FiSearch, FiChevronRight, FiTrash2, FiX, FiPlus, FiSend, FiRefreshCw,
-  FiGlobe, FiHash, FiCalendar, FiArrowLeft, FiMenu, FiFileText
+  FiGlobe, FiHash, FiCalendar, FiArrowLeft, FiMenu, FiFileText,
+  FiUser, FiEdit2, FiStar
 } from 'react-icons/fi'
 import {
   HiOutlineViewGrid, HiOutlinePlusCircle, HiOutlineClock, HiOutlineCog,
@@ -82,6 +83,15 @@ interface Campaign {
   results?: PostResult[]
   batch_id?: string
   summary?: string
+}
+
+interface PinterestAccount {
+  id: string
+  username: string
+  displayName: string
+  boards: string[]
+  isActive: boolean
+  addedAt: string
 }
 
 interface AppSettings {
@@ -355,11 +365,14 @@ function PinCard({
   pin,
   onUpdate,
   onRemove,
+  boards,
 }: {
   pin: PinItem
   onUpdate: (id: string, updates: Partial<PinItem>) => void
   onRemove: (id: string) => void
+  boards?: string[]
 }) {
+  const boardList = Array.isArray(boards) && boards.length > 0 ? boards : BOARDS
   const [newTag, setNewTag] = useState('')
 
   const addHashtag = () => {
@@ -446,7 +459,7 @@ function PinCard({
                 <SelectValue placeholder="Select board..." />
               </SelectTrigger>
               <SelectContent>
-                {BOARDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                {boardList.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -535,11 +548,21 @@ export default function Page() {
   const [historySearch, setHistorySearch] = useState('')
   const [settingsSaved, setSettingsSaved] = useState(false)
 
+  // Accounts
+  const [accounts, setAccounts] = useState<PinterestAccount[]>([])
+  const [showAddAccount, setShowAddAccount] = useState(false)
+  const [newAccountUsername, setNewAccountUsername] = useState('')
+  const [newAccountDisplayName, setNewAccountDisplayName] = useState('')
+  const [newAccountBoards, setNewAccountBoards] = useState('')
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
+  const [accountMessage, setAccountMessage] = useState('')
+
   // --------------- Load from localStorage ---------------
   useEffect(() => {
     setCampaigns(loadFromStorage<Campaign[]>('pinbot_campaigns', []))
     setSettings(loadFromStorage<AppSettings>('pinbot_settings', { defaultBoard: 'Home Decor', defaultVariations: 3, timezone: 'America/New_York' }))
     setStats(loadFromStorage<AppStats>('pinbot_stats', { totalPosted: 0, totalScheduled: 0, totalDrafts: 0 }))
+    setAccounts(loadFromStorage<PinterestAccount[]>('pinbot_accounts', []))
   }, [])
 
   // --------------- Persist ---------------
@@ -557,6 +580,69 @@ export default function Page() {
     setSettings(s)
     saveToStorage('pinbot_settings', s)
   }, [])
+
+  const saveAccounts = useCallback((a: PinterestAccount[]) => {
+    setAccounts(a)
+    saveToStorage('pinbot_accounts', a)
+  }, [])
+
+  const handleAddAccount = useCallback(() => {
+    const username = newAccountUsername.trim()
+    const displayName = newAccountDisplayName.trim() || username
+    if (!username) {
+      setAccountMessage('Please enter a Pinterest username.')
+      return
+    }
+    if (accounts.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+      setAccountMessage('This account is already added.')
+      return
+    }
+    const boardsList = newAccountBoards
+      .split(',')
+      .map(b => b.trim())
+      .filter(Boolean)
+
+    const newAccount: PinterestAccount = {
+      id: generateId(),
+      username,
+      displayName,
+      boards: boardsList.length > 0 ? boardsList : [...BOARDS],
+      isActive: accounts.length === 0,
+      addedAt: new Date().toISOString(),
+    }
+    const updated = [...accounts, newAccount]
+    saveAccounts(updated)
+    setNewAccountUsername('')
+    setNewAccountDisplayName('')
+    setNewAccountBoards('')
+    setShowAddAccount(false)
+    setAccountMessage(`Account "${displayName}" added successfully!`)
+    setTimeout(() => setAccountMessage(''), 3000)
+  }, [newAccountUsername, newAccountDisplayName, newAccountBoards, accounts, saveAccounts])
+
+  const handleRemoveAccount = useCallback((id: string) => {
+    const updated = accounts.filter(a => a.id !== id)
+    if (updated.length > 0 && !updated.some(a => a.isActive)) {
+      updated[0].isActive = true
+    }
+    saveAccounts(updated)
+    setAccountMessage('Account removed.')
+    setTimeout(() => setAccountMessage(''), 3000)
+  }, [accounts, saveAccounts])
+
+  const handleSetActiveAccount = useCallback((id: string) => {
+    const updated = accounts.map(a => ({ ...a, isActive: a.id === id }))
+    saveAccounts(updated)
+  }, [accounts, saveAccounts])
+
+  const handleUpdateAccountBoards = useCallback((id: string, boardsStr: string) => {
+    const boardsList = boardsStr.split(',').map(b => b.trim()).filter(Boolean)
+    const updated = accounts.map(a => a.id === id ? { ...a, boards: boardsList } : a)
+    saveAccounts(updated)
+    setEditingAccountId(null)
+    setAccountMessage('Boards updated.')
+    setTimeout(() => setAccountMessage(''), 3000)
+  }, [accounts, saveAccounts])
 
   // --------------- Generate Pins (Agent 1) ---------------
   const handleGeneratePins = useCallback(async () => {
@@ -642,7 +728,12 @@ export default function Page() {
         scheduled_time: pin.scheduledTime,
       }))
 
-      const message = `Post/schedule these approved Pinterest pins: ${JSON.stringify({ pins: approvedPins })}`
+      const acct = accounts.find(a => a.isActive)
+      const payload: Record<string, any> = { pins: approvedPins }
+      if (acct) {
+        payload.pinterest_account = acct.username
+      }
+      const message = `Post/schedule these approved Pinterest pins: ${JSON.stringify(payload)}`
       const result = await callAIAgent(message, SCHEDULER_AGENT_ID)
 
       if (result.success) {
@@ -729,6 +820,10 @@ export default function Page() {
   }, [bulkTime])
 
   // --------------- Computed ---------------
+  const activeAccount = accounts.find(a => a.isActive)
+  const availableBoards = activeAccount && Array.isArray(activeAccount.boards) && activeAccount.boards.length > 0
+    ? activeAccount.boards
+    : BOARDS
   const selectedCount = pins.filter(p => p.selected).length
   const displayCampaigns = sampleMode ? SAMPLE_CAMPAIGNS : campaigns
   const displayStats = sampleMode ? { totalPosted: 12, totalScheduled: 5, totalDrafts: 3 } : stats
@@ -1001,7 +1096,7 @@ export default function Page() {
                       <SelectValue placeholder="Board for all..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {BOARDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                      {availableBoards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Button variant="outline" size="sm" onClick={applyBulkBoard} disabled={!bulkBoard} className="h-8 text-xs">Apply</Button>
@@ -1021,7 +1116,7 @@ export default function Page() {
             {/* Pin Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentPins.map(pin => (
-                <PinCard key={pin.id} pin={pin} onUpdate={updatePin} onRemove={removePin} />
+                <PinCard key={pin.id} pin={pin} onUpdate={updatePin} onRemove={removePin} boards={availableBoards} />
               ))}
             </div>
 
@@ -1240,30 +1335,206 @@ export default function Page() {
   // ============================================================
   // RENDER: SETTINGS SCREEN
   // ============================================================
-  const renderSettings = () => (
+  const renderSettings = () => {
+    const activeAccount = accounts.find(a => a.isActive)
+
+    return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground" style={{ letterSpacing: '-0.01em' }}>Settings</h2>
-        <p className="text-sm text-muted-foreground mt-1">Configure your PinBot preferences</p>
+        <p className="text-sm text-muted-foreground mt-1">Configure your PinBot preferences and manage accounts</p>
       </div>
 
-      {/* Pinterest Connection */}
-      <GlassCard className="p-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-[0.875rem] bg-red-100 flex items-center justify-center">
-            <BsPin className="w-6 h-6 text-red-600" />
+      {/* Status Message */}
+      {accountMessage && (
+        <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 px-4 py-2 rounded-lg">
+          <FiCheckCircle className="w-4 h-4 flex-shrink-0" />{accountMessage}
+        </div>
+      )}
+
+      {/* Pinterest Accounts Management */}
+      <GlassCard className="p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[0.875rem] bg-red-100 flex items-center justify-center">
+              <BsPin className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Pinterest Accounts</h3>
+              <p className="text-xs text-muted-foreground">
+                {accounts.length === 0 ? 'Add your Pinterest accounts to get started' : `${accounts.length} account${accounts.length !== 1 ? 's' : ''} configured`}
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Pinterest Account</h3>
-            <p className="text-xs text-muted-foreground">Connection managed by agent integration</p>
+          <Button
+            variant={showAddAccount ? 'secondary' : 'default'}
+            size="sm"
+            onClick={() => setShowAddAccount(!showAddAccount)}
+            className="gap-1.5"
+          >
+            {showAddAccount ? <><FiX className="w-4 h-4" />Cancel</> : <><FiPlus className="w-4 h-4" />Add Account</>}
+          </Button>
+        </div>
+
+        {/* Add Account Form */}
+        {showAddAccount && (
+          <div className="border border-border rounded-[0.875rem] p-4 bg-background/50 space-y-3">
+            <p className="text-sm font-medium text-foreground">New Pinterest Account</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Pinterest Username</Label>
+                <Input
+                  value={newAccountUsername}
+                  onChange={(e) => setNewAccountUsername(e.target.value)}
+                  placeholder="e.g. johndoe_pins"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Display Name (optional)</Label>
+                <Input
+                  value={newAccountDisplayName}
+                  onChange={(e) => setNewAccountDisplayName(e.target.value)}
+                  placeholder="e.g. John's Pinterest"
+                  className="h-9"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Custom Boards (comma-separated, leave blank for defaults)</Label>
+              <Input
+                value={newAccountBoards}
+                onChange={(e) => setNewAccountBoards(e.target.value)}
+                placeholder="e.g. My Recipes, Travel Inspiration, Home Ideas"
+                className="h-9"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleAddAccount} size="sm" className="gap-1.5">
+                <FiPlus className="w-3.5 h-3.5" /> Add Account
+              </Button>
+            </div>
           </div>
-          <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100 gap-1">
-            <FiCheckCircle className="w-3 h-3" /> Connected
-          </Badge>
+        )}
+
+        {/* Account List */}
+        {accounts.length === 0 && !showAddAccount ? (
+          <div className="text-center py-6">
+            <FiUser className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-1">No accounts added yet</p>
+            <p className="text-xs text-muted-foreground">Add a Pinterest account to organize your boards and pin posting.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {accounts.map(account => (
+              <div
+                key={account.id}
+                className={cn(
+                  'border rounded-[0.875rem] p-4 transition-all duration-200',
+                  account.isActive
+                    ? 'border-primary/40 bg-primary/5'
+                    : 'border-border bg-background/50'
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className={cn(
+                      'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                      account.isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    )}>
+                      <FiUser className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-foreground truncate">{account.displayName}</p>
+                        {account.isActive && (
+                          <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 text-[10px] px-1.5 py-0 gap-0.5">
+                            <FiStar className="w-2.5 h-2.5" />Active
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">@{account.username}</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {editingAccountId === account.id ? (
+                          <div className="w-full space-y-2">
+                            <Input
+                              defaultValue={account.boards.join(', ')}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleUpdateAccountBoards(account.id, (e.target as HTMLInputElement).value)
+                                }
+                                if (e.key === 'Escape') {
+                                  setEditingAccountId(null)
+                                }
+                              }}
+                              placeholder="Board 1, Board 2, Board 3..."
+                              className="h-8 text-xs"
+                              autoFocus
+                            />
+                            <p className="text-[10px] text-muted-foreground">Press Enter to save, Escape to cancel</p>
+                          </div>
+                        ) : (
+                          <>
+                            {Array.isArray(account.boards) && account.boards.slice(0, 5).map((board, i) => (
+                              <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">{board}</Badge>
+                            ))}
+                            {Array.isArray(account.boards) && account.boards.length > 5 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{account.boards.length - 5} more</Badge>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-1.5">Added {formatDate(account.addedAt)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!account.isActive && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSetActiveAccount(account.id)}
+                        className="h-8 px-2 text-xs text-muted-foreground hover:text-primary"
+                        title="Set as active account"
+                      >
+                        <FiStar className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingAccountId(editingAccountId === account.id ? null : account.id)}
+                      className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      title="Edit boards"
+                    >
+                      <FiEdit2 className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveAccount(account.id)}
+                      className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                      title="Remove account"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Connection Note */}
+        <div className="flex items-start gap-2.5 bg-muted/50 rounded-lg p-3">
+          <FiAlertCircle className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Pinterest API authentication is managed automatically by the agent integration. Adding accounts here helps organize your boards and track which profile to post to. The active account is used as the default when scheduling pins.
+          </p>
         </div>
       </GlassCard>
 
-      {/* Default Board */}
+      {/* Default Settings */}
       <GlassCard className="p-6 space-y-4">
         <h3 className="font-semibold text-foreground">Default Settings</h3>
 
@@ -1274,10 +1545,15 @@ export default function Page() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {BOARDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+              {activeAccount && Array.isArray(activeAccount.boards) && activeAccount.boards.length > 0
+                ? activeAccount.boards.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)
+                : BOARDS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)
+              }
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">New pins will default to this board</p>
+          <p className="text-xs text-muted-foreground">
+            {activeAccount ? `Showing boards from "${activeAccount.displayName}"` : 'New pins will default to this board'}
+          </p>
         </div>
 
         <Separator />
@@ -1327,18 +1603,22 @@ export default function Page() {
       {/* Data Management */}
       <GlassCard className="p-6 space-y-4">
         <h3 className="font-semibold text-foreground">Data Management</h3>
-        <p className="text-xs text-muted-foreground">Campaign history and stats are stored locally in your browser.</p>
+        <p className="text-xs text-muted-foreground">Campaign history, accounts, and stats are stored locally in your browser.</p>
         <div className="flex gap-3">
           <Button variant="outline" size="sm" onClick={() => {
             saveCampaigns([])
             saveStats({ totalPosted: 0, totalScheduled: 0, totalDrafts: 0 })
+            saveAccounts([])
+            setAccountMessage('All data cleared.')
+            setTimeout(() => setAccountMessage(''), 3000)
           }} className="gap-2 text-destructive hover:text-destructive">
             <FiTrash2 className="w-4 h-4" /> Clear All Data
           </Button>
         </div>
       </GlassCard>
     </div>
-  )
+    )
+  }
 
   // ============================================================
   // MAIN RENDER
