@@ -1,0 +1,46 @@
+{
+  "agent_name": "Content Extraction & Pin Generator Agent",
+  "agent_id": "6998907d2407a74739486761",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "source_url": { "type": "string" },
+      "page_title": { "type": "string" },
+      "page_summary": { "type": "string" },
+      "pins": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "pin_title": { "type": "string" },
+            "pin_description": { "type": "string" },
+            "hashtags": { "type": "array", "items": { "type": "string" } },
+            "suggested_post_time": { "type": "string" },
+            "source_url": { "type": "string" }
+          },
+          "required": ["pin_title", "pin_description", "hashtags", "suggested_post_time", "source_url"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["source_url", "page_title", "page_summary", "pins"],
+    "additionalProperties": false
+  },
+  "example_response": {
+    "source_url": "https://example.com/blog-post",
+    "page_title": "10 Tips for Better Home Decor",
+    "page_summary": "A comprehensive guide to improving your home decor with budget-friendly tips and modern design principles.",
+    "pins": [
+      {
+        "pin_title": "Transform Your Home with These 10 Budget-Friendly Decor Tips",
+        "pin_description": "Discover easy and affordable ways to elevate your home decor. From color palettes to furniture arrangement, these expert tips will help you create a stunning living space without breaking the bank.",
+        "hashtags": ["#HomeDecor", "#InteriorDesign", "#BudgetDecor", "#HomeStyling", "#DecorTips"],
+        "suggested_post_time": "Saturday 8:00 PM EST",
+        "source_url": "https://example.com/blog-post"
+      }
+    ]
+  }
+}

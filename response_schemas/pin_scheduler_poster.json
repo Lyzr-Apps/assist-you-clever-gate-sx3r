@@ -1,0 +1,52 @@
+{
+  "agent_name": "Pin Scheduler & Poster Agent",
+  "agent_id": "6998907df1c47561a67ba275",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "object",
+    "properties": {
+      "batch_id": { "type": "string" },
+      "total_pins": { "type": "number" },
+      "successful": { "type": "number" },
+      "failed": { "type": "number" },
+      "scheduled": { "type": "number" },
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "pin_title": { "type": "string" },
+            "status": { "type": "string" },
+            "board": { "type": "string" },
+            "scheduled_time": { "type": "string" },
+            "message": { "type": "string" }
+          },
+          "required": ["pin_title", "status", "board", "scheduled_time", "message"],
+          "additionalProperties": false
+        }
+      },
+      "summary": { "type": "string" }
+    },
+    "required": ["batch_id", "total_pins", "successful", "failed", "scheduled", "results", "summary"],
+    "additionalProperties": false
+  },
+  "example_response": {
+    "batch_id": "batch_abc123",
+    "total_pins": 3,
+    "successful": 2,
+    "failed": 0,
+    "scheduled": 1,
+    "results": [
+      {
+        "pin_title": "Transform Your Home with These 10 Budget-Friendly Decor Tips",
+        "status": "scheduled",
+        "board": "Home Decor Ideas",
+        "scheduled_time": "2026-02-22T20:00:00Z",
+        "message": "Pin successfully scheduled for posting."
+      }
+    ],
+    "summary": "Batch operation complete: 2 pins posted immediately, 1 pin scheduled for later."
+  }
+}

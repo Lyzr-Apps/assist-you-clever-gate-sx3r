@@ -1,0 +1,50 @@
+{
+  "agent_name": "Pin Scheduler & Poster Agent",
+  "agent_id": "6998907df1c47561a67ba275",
+  "description": "Takes approved/edited pin data (title, description, hashtags, board selections, schedule time) and posts or schedules pins to Pinterest via the Pinterest API. Confirms successful posting and returns status.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "batch_id": "string",
+    "total_pins": "number",
+    "successful": "number",
+    "failed": "number",
+    "scheduled": "number",
+    "results": [
+      {
+        "pin_title": "string",
+        "status": "string",
+        "board": "string",
+        "scheduled_time": "string",
+        "message": "string"
+      }
+    ],
+    "summary": "string"
+  },
+  "example_response": {
+    "batch_id": "sample string",
+    "total_pins": 0,
+    "successful": 0,
+    "failed": 0,
+    "scheduled": 0,
+    "results": [
+      {
+        "pin_title": "sample string",
+        "status": "sample string",
+        "board": "sample string",
+        "scheduled_time": "sample string",
+        "message": "sample string"
+      }
+    ],
+    "summary": "sample string"
+  },
+  "has_module_outputs": true,
+  "module_outputs_example": {
+    "artifact_files": [
+      {
+        "file_url": "https://example.com/image.png"
+      }
+    ]
+  }
+}

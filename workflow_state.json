@@ -1,0 +1,16 @@
+{
+  "agents": [
+    {
+      "name": "Content Extraction & Pin Generator Agent",
+      "agent_id": "6998907d2407a74739486761",
+      "provider": "perplexity",
+      "model": "sonar-pro"
+    },
+    {
+      "name": "Pin Scheduler & Poster Agent",
+      "agent_id": "6998907df1c47561a67ba275",
+      "provider": "openai",
+      "model": "gpt-4.1"
+    }
+  ]
+}

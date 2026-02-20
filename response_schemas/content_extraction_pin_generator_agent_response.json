@@ -1,0 +1,40 @@
+{
+  "agent_name": "Content Extraction & Pin Generator Agent",
+  "agent_id": "6998907d2407a74739486761",
+  "description": "Crawls the provided website/blog URL, extracts key content (title, description, images), and generates SEO-optimized pin titles, descriptions, and hashtags for multiple pin variations. Suggests optimal posting times.",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "source_url": "string",
+    "page_title": "string",
+    "page_summary": "string",
+    "pins": [
+      {
+        "pin_title": "string",
+        "pin_description": "string",
+        "hashtags": [
+          "string"
+        ],
+        "suggested_post_time": "string",
+        "source_url": "string"
+      }
+    ]
+  },
+  "example_response": {
+    "source_url": "sample string",
+    "page_title": "sample string",
+    "page_summary": "sample string",
+    "pins": [
+      {
+        "pin_title": "sample string",
+        "pin_description": "sample string",
+        "hashtags": [
+          "sample string"
+        ],
+        "suggested_post_time": "sample string",
+        "source_url": "sample string"
+      }
+    ]
+  }
+}
