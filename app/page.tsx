@@ -1096,7 +1096,7 @@ export default function Page() {
         {summaryData.batch_id && (
           <GlassCard className="p-4">
             <div className="flex items-start gap-3">
-              <Hash className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+              <FiHash className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Batch ID</p>
                 <p className="text-sm font-mono text-foreground">{summaryData.batch_id}</p>
@@ -1132,7 +1132,7 @@ export default function Page() {
                     <p className="text-sm font-medium text-foreground">{r.pin_title ?? 'Untitled Pin'}</p>
                     <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                       {r.board && <span className="flex items-center gap-1"><BsPin className="w-3 h-3" />{r.board}</span>}
-                      {r.scheduled_time && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDateTime(r.scheduled_time)}</span>}
+                      {r.scheduled_time && <span className="flex items-center gap-1"><FiCalendar className="w-3 h-3" />{formatDateTime(r.scheduled_time)}</span>}
                     </div>
                     {r.message && (
                       <p className={cn('text-xs mt-2', normalizedStatus === 'failed' || normalizedStatus === 'error' ? 'text-destructive' : 'text-muted-foreground')}>
@@ -1144,7 +1144,7 @@ export default function Page() {
                     <StatusBadge status={r.status} />
                     {(normalizedStatus === 'failed' || normalizedStatus === 'error') && (
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                        <RefreshCw className="w-3 h-3" /> Retry
+                        <FiRefreshCw className="w-3 h-3" /> Retry
                       </Button>
                     )}
                   </div>
@@ -1177,7 +1177,7 @@ export default function Page() {
       <GlassCard className="p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
@@ -1199,7 +1199,7 @@ export default function Page() {
       {/* Campaign List */}
       {filteredCampaigns.length === 0 ? (
         <GlassCard className="p-8 text-center">
-          <History className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+          <HiOutlineClock className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">
             {displayCampaigns.length === 0 ? 'No campaign history yet. Create your first pins to get started!' : 'No campaigns match your search.'}
           </p>
@@ -1222,8 +1222,8 @@ export default function Page() {
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><BsPin className="w-3 h-3" />{c.pin_count} {c.pin_count === 1 ? 'pin' : 'pins'}</span>
-                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(c.date)}</span>
-                    {c.batch_id && <span className="flex items-center gap-1 font-mono"><Hash className="w-3 h-3" />{c.batch_id}</span>}
+                    <span className="flex items-center gap-1"><FiCalendar className="w-3 h-3" />{formatDate(c.date)}</span>
+                    {c.batch_id && <span className="flex items-center gap-1 font-mono"><FiHash className="w-3 h-3" />{c.batch_id}</span>}
                   </div>
                   {c.summary && (
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{c.summary}</p>
@@ -1316,10 +1316,10 @@ export default function Page() {
 
         <div className="flex items-center justify-between">
           <Button onClick={() => { saveSettings(settings); setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 3000) }} className="gap-2">
-            <CheckCircle2 className="w-4 h-4" /> Save Settings
+            <FiCheckCircle className="w-4 h-4" /> Save Settings
           </Button>
           {settingsSaved && (
-            <span className="text-sm text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" />Settings saved!</span>
+            <span className="text-sm text-green-600 flex items-center gap-1"><FiCheckCircle className="w-4 h-4" />Settings saved!</span>
           )}
         </div>
       </GlassCard>
@@ -1349,7 +1349,7 @@ export default function Page() {
         {/* Mobile Header */}
         <div className="lg:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-4">
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-muted transition-colors">
-            <Menu className="w-5 h-5" />
+            <FiMenu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
